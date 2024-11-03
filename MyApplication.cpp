@@ -26,8 +26,15 @@ int pedestrian_crossing_ground_truth[][9] = {
 	{ 27,0,138,503,151,0,179,503,193}
 };
 
+double calculateIoU(Rect box1, Rect box2) {
+    int intersectionArea = (box1 & box2).area();
+    int unionArea = box1.area() + box2.area() - intersectionArea;
+    return (double)intersectionArea / unionArea;
+}
+
 void MyApplication()
 {
+	int TP = 0, FP = 0, FN = 0;
 	for (int image_index = 10; (image_index <= 29); image_index++)
 	{
 		char filename[200];
@@ -67,10 +74,29 @@ void MyApplication()
 			}
 		}
 
+		vector<Rect> ground_truth_boxes = pedestrian_crossing_ground_truth[image_index]; // Implement this based on `pedestrian_crossing_ground_truth`
+        	for (const Rect& gt_box : ground_truth_boxes) {
+            		bool foundMatch = false;
+            		for (const Rect& detected_box : detected_boxes) {
+                		if (calculateIoU(gt_box, detected_box) > 0.5) {
+                    		TP++;
+                    		foundMatch = true;
+                    		break;
+                		}
+            		}
+            	if (!foundMatch) FN++;
+        	}
+        	FP += detected_boxes.size() - TP;
+		
 		imshow(filename, original_image);
 		imshow("Edge Detection", closed_image);
 		imshow("Contours", contour_image);
 		char cha = cv::waitKey();
 		cv::destroyAllWindows();
 	}
+	double precision = (double)TP / (TP + FP);
+    	double recall = (double)TP / (TP + FN);
+    	double f1Score = 2 * (precision * recall) / (precision + recall);
+
+    	cout << "Precision: " << precision << ", Recall: " << recall << ", F1 Score: " << f1Score << endl;
 }
